@@ -1,0 +1,303 @@
+첨언: 자식 모듈 생성시, frontend 먼저 생성 > 깃허브 연결 > 부모 모듈에서 git submodule add 하여 정상 생성하는 지 확인한 후,
+backend 도 같은 방법을 시도하면 잘 되는 것 같음
+
+<자식 모듈 생성>
+1. (자식 모듈 backend 생성) nest new apply-drama-backend > Webstorm 에서 불러서 깃허브 연결
+2. (자식 모듈 frontend 생성) yarn create quasar (프로젝트명 'apply-drama-frontend' / 패키지 명 'frontend') > Webstorm 에서 불러서 깃허브 연결
+
+<부모 모듈 생성>
+(부모 모듈 생성) mkdir apply-drama (project 이름) > Webstorm 에서 Open
+(필수 파일 생성)
+    ㅇ /.gitignore 생성 (내용 아래 참조)
+    ㅇ /.prettierc 생성 (내용 아래 참조)
+    ㅇ /build.sh 생성 (내용 아래 참조)
+    ㅇ /package.json 생성
+       {
+         "private": true,
+         "workspaces": {
+           "packages": ["backend", "frontend"]
+         },
+         "scripts": {}
+       }
+(깃허브 연결) 루트 모듈 깃허브 생성
+
+
+<자식 모듈 연결>
+
+(자식 모듈 가져오기) shell 에 다음 실행
+    ㅇ git submodule add https://github.com/jhoon2002/apply-drama-backend.git backend
+    ㅇ git submodule add https://github.com/jhoon2002/apply-drama-frontend.git frontend
+        => backend, frontend 디렉토리 생성 확인
+        => .gitmodules 파일 생성 확인
+    ㅇ 각각의 package.json 에서 name 을 'backend', 'frontend' 로 변경하기(변경이 안되어 있다면)
+      (이래야 예컨데, yarn workspace backend 명령어... 에서 backend 라는 workspace 를 인식함)
+    ㅇ 각 서브모듈에 .prettierrc 복사해서 넣을 것
+(디렉토리 매핑) Webstorm > File > Settings > Version Control > Directory Mappings 에서 backend, frontend 를 각각 생성('Git' 선택)
+    => 이래야 Webstorm 에서 3개의 레포지터리에 push 해줌
+
+
+<각 모듈 업그레이드>
+
+1. 부모 모듈 루트에서 shell 로 실행
+   syncyarnlock -s -k  (없으면, yarn global add syncyarnlock)
+   => 자식까지 3개의 모든 package.json 이 모두 버전 업(마이너 범위내에서)
+
+2. 각 자식모듈의 package.json 에서 eslint 버전 고정: "eslint": "8.22.0" 이렇게 할것 ('^' 삭제)
+
+3. 부모 모듈에서
+   yarn install
+   => 자식까지 모둘 install
+
+4. Commit & Push 한번 해주기
+
+5. Webstorm > File > Settings > 'prettier' 검색하여 모듈 선택, 확장자 선택, On Save 선택
+
+
+<Nest, Quasar 연동>
+
+A. Nest
+
+ㅇ yarn workspace backend add @nestjs/swagger swagger-ui-express
+ㅇ yarn workspace backend add --dev @types/terser-webpack-plugin
+ㅇ ./backend/src/index.ts 생성 (내용 아래 참조)
+ㅇ ./backend/src/main.ts 수정 (내용 아래 참조)
+ㅇ package.json 에 아래 추가: 첫줄이 중요(첫줄이 빠지면 front 에서 backend 모듈 설치 후에도 인식 불가)
+  "main": "dist/index.js",
+  "scripts": {
+    "build:dev": "nest build --watch"
+  }
+
+
+B. Quasar
+
+ㅇ frontend/package.json 수정
+  "scripts": {
+      "dev": "quasar dev -m ssr",
+      "build": "quasar build -m ssr",
+      "start": "node dist/ssr/index.js"
+  }
+ㅇ yarn workspace frontend add --dev @types/compression
+ㅇ yarn workspace frontend add backend@0.0.1
+ㅇ yarn workspace frontend add serialize-javascript   <= 이건 없어도 Webstorm 에서 구동하는데 문제 없음, 다만 Heroku 에서 필요
+ㅇ yarn workspace frontend add compression   <= 이건 없어도 Webstorm 에서 구동하는데 문제 없음, 다만 Heroku 에서 필요
+ㅇ ./frontend/src-ssr/middlewares/compression.ts 생성 (내용 아래 참조)
+ㅇ ./frontend/src-ssr/middlewares/render.ts 수정(내용 아래 참조)
+ㅇ 부모 package.json 수정
+    "scripts": {
+        "postinstall": "bash build.sh",
+        "start": "yarn workspace frontend start"
+    }
+ㅇ Procfile 생성
+    web: yarn start
+
+ㅇ Commit & Push
+
+<Heroku 설정>
+ㅇ heroku 에서 새 앱 생성: New > Create new app
+ㅇ (이하 부모 모듈에서)
+ㅇ heroku login
+ㅇ heroku git:remote -a <heroku 에서 생성한 app 이름>
+ㅇ heroku config:set NODE_ENV=development
+
+   (이거 5번 매우 중요, 안하면 deploy 과정에서 inheroku config:set NPM_CONFIG_PRODUCTION=falsestall 되었다가, node_modules 의 내용이
+    삭제되어 모듈을 못찾는 에러 발생, 'heroku run ls node_modules' 해보면 확인 가능)
+ㅇ git add . (불필요할 수도)
+   git commit -am "make it better" (이미 커밋 되었을 수도 있음)
+   git push heroku master (제일 중요)
+   => shell 창에 바로 deploy 진행되는 내용 확인
+   => 모두 deploy 가 끝나면 해당 URL 로 확인
+
+
+
+
+========================================================
+<.gitignore>
+.DS_Store
+.thumbs.db
+node_modules
+database
+
+# Quasar core related directories
+.quasar
+/dist
+
+# Cordova related directories and files
+/src-cordova/node_modules
+/src-cordova/platforms
+/src-cordova/plugins
+/src-cordova/www
+
+# Capacitor related directories and files
+/src-capacitor/www
+/src-capacitor/node_modules
+
+# BEX related directories and files
+/src-bex/www
+/src-bex/js/core
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+<.prettierc>
+{
+    "singleQuote": true,
+    "semi": false,
+    "useTabs": false,
+    "tabWidth": 4,
+    "trailingComma": "all",
+    "printWidth": 120,
+    "bracketSpacing": true,
+    "arrowParens": "avoid",
+    "endOfLine": "auto"
+}
+
+<build.sh>
+#!/bin/bash
+echo && echo && echo && echo  "<< bash 시작 >>" && echo
+installDependencies() {
+    echo && echo && echo && echo  "[nestjs/cli, quasar/cli 설치...]"  && echo
+    yarn global add @nestjs/cli
+    yarn global add @quasar/cli
+}
+setupServer() {
+    cd ./backend || return
+    echo && echo && echo && echo  "[백엔드 빌드...]" && echo
+    yarn build
+    cd ..
+}
+setupClient() {
+    cd ./frontend || return
+    echo && echo && echo && echo  "[프론트엔드 빌드...]" && echo
+    yarn build
+    cd ..
+}
+#copy() {
+#    echo  " Copying assets to server"  &&  echo
+#    mkdir -p ./server/views
+#    cp -R ./client/dist/spa/* ./server/views
+#    }
+#}
+#installDependencies && setupServer && setupClient && copy
+#installDependencies && setupServer && setupClient && copy
+installDependencies && setupServer && setupClient
+echo && echo && echo && echo  "<< bash 종료 >>" && echo
+
+
+<index.ts>
+import { Express, Request, Response } from 'express';
+import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+
+interface RenderParams {
+  req: Request;
+  res: Response;
+}
+
+interface ConfigureParams {
+  app: Express;
+  prefix: string;
+  render?: (params: RenderParams) => Promise<void>;
+}
+
+export default async function bootstrap({
+  app: server,
+  prefix,
+  render,
+}: ConfigureParams) {
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+  app.setGlobalPrefix(prefix);
+  app.useGlobalFilters({
+    async catch(exception, host) {
+      const ctx = host.switchToHttp();
+      const status = exception.getStatus() as number;
+      const next = ctx.getNext();
+      if (status === 404 && render) {
+        const req = ctx.getRequest<Request>();
+        const res = ctx.getResponse<Response>();
+        await render({ req, res });
+      } else {
+        next();
+      }
+    },
+  });
+  const config = new DocumentBuilder()
+    .setTitle('Quasar Nest example')
+    .setDescription('The cats API description')
+    .setVersion('1.0')
+    .addTag('cats')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup(`${prefix}/docs`, app, document);
+  return app;
+}
+
+
+<main.ts>
+import configure from './index';
+import * as express from 'express';
+
+async function bootstrap() {
+  const app = express();
+  const nest = await configure({ app, prefix: 'api' });
+  await nest.listen(3000);
+}
+bootstrap();
+
+
+<compression.ts>
+import compression from 'compression'
+import { ssrMiddleware } from 'quasar/wrappers'
+
+export default ssrMiddleware(({ app }) => {
+  app.use(
+    compression({ threshold: 0 })
+  )
+})
+
+
+<render.ts>
+import configure from 'backend'
+import { ssrMiddleware } from 'quasar/wrappers'
+import { RenderError } from '@quasar/app'
+
+export default ssrMiddleware(async ({ app, render, serve }) => {
+  const nest = await configure({
+    app,
+    prefix: 'api',
+    async render ({ req, res }) {
+      res.setHeader('Content-Type', 'text/html')
+
+      try {
+        const html = await render({ req, res })
+        res.send(html)
+      } catch (error) {
+        const err = error as RenderError
+        if (err.url) {
+          if (err.code) {
+            res.redirect(err.code, err.url)
+          } else {
+            res.redirect(err.url)
+          }
+        } else if (err.code === 404) {
+          res.status(404).send('404 | Page Not Found')
+        } else if (process.env.DEV) {
+          serve.error({ err, req, res })
+        } else {
+          res.status(500).send('500 | Internal Server Error')
+        }
+      }
+    }
+  });
+  await nest.init()
+});
