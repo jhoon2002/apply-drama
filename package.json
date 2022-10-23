@@ -8,8 +8,15 @@
     },
     "scripts": {
         "postinstall": "bash build.sh",
-        "start": "yarn workspace frontend start",
+        "start2": "yarn workspace frontend start",
         "dev1": "yarn workspace backend start:dev",
-        "dev2": "yarn workspace frontend dev"
+        "dev2": "yarn workspace frontend dev",
+        "backend:dev": "yarn workspace backend build:dev",
+        "backend:build": "yarn workspace backend build",
+        "backend:start": "yarn workspace backend start",
+        "frontend:dev": "yarn workspace frontend dev",
+        "start": "yarn backend:start",
+        "dev": "concurrently \"yarn backend:dev\" \"yarn frontend:dev\"",
+        "postinstall2222": "yarn backend:build"
     }
 }
