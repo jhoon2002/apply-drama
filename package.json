@@ -9,8 +9,10 @@
     "scripts": {
         "postinstall": "bash build.sh",
         "start": "yarn workspace frontend start",
-        "dev1": "yarn workspace backend start:dev",
-        "dev2": "yarn workspace frontend dev",
+        "dev1": "cross-env NODE_ENV=dev yarn workspace backend start:dev",
+        "dev2": "cross-env NODE_ENV=dev yarn workspace frontend dev",
+        "dev11": "cross-env NODE_ENV=prod yarn workspace backend start:dev",
+        "dev22": "cross-env NODE_ENV=prod yarn workspace frontend dev",
         "backend:dev": "yarn workspace backend build:dev",
         "backend:build": "yarn workspace backend build",
         "backend:start": "yarn workspace backend start",
