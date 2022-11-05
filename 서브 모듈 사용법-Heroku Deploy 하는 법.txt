@@ -302,3 +302,10 @@ export default ssrMiddleware(async ({ app, render, serve }) => {
   await nest.init()
 });
 
+----------------
+[remote rejected] master -> master (pre-receive hook declined) 발생 시 대처법
+
+git remote
+git remote remove heroku
+heroku git:remote -a apply-drama
+git push heroku master
