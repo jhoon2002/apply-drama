@@ -1,5 +1,6 @@
 {
     "private": true,
+    "author": "Yeo <jhoon2002@naver.com>",
     "workspaces": {
         "packages": [
             "backend",
